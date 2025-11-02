@@ -1,83 +1,23 @@
-from datetime import date
+from datetime import date, timedelta
 
-class Pagina:
-    def __init__(self, numero, contenido):
-        self.numero = numero
-        self.contenido = contenido
-
-    def mostrarPagina(self):
-        print(f"Página {self.numero}: {self.contenido}")
-
-
-# Clase Libro
-class Libro:
-    def __init__(self, titulo, isbn, contenidos_paginas):
-        self.titulo = titulo
-        self.isbn = isbn
-        self.paginas = [Pagina(i+1, contenido) for i, contenido in enumerate(contenidos_paginas)]
-
-    def leer(self):
-        print(f"--- Leyendo '{self.titulo}' ---")
-        for pagina in self.paginas:
-            pagina.mostrarPagina()
-
-
-# Clase Autor (Agregación)
-class Autor:
-    def __init__(self, nombre, nacionalidad):
-        self.nombre = nombre
-        self.nacionalidad = nacionalidad
-
-    def mostrarInfo(self):
-        print(f"Autor: {self.nombre} ({self.nacionalidad})")
-
-
-# Clase Estudiante (Asociación)
-class Estudiante:
-    def __init__(self, codigo, nombre):
-        self.codigo = codigo
-        self.nombre = nombre
-
-    def mostrarInfo(self):
-        print(f"Estudiante: {self.nombre} - Código: {self.codigo}")
-
-
-# Clase Prestamo (Asociación)
-class Prestamo:
-    def __init__(self, estudiante, libro):
-        self.fecha_prestamo = date.today()
-        self.fecha_devolucion = None
-        self.estudiante = estudiante
-        self.libro = libro
-
-    def mostrarInfo(self):
-        print(f"Préstamo: Libro '{self.libro.titulo}' a {self.estudiante.nombre} el {self.fecha_prestamo}")
-
-    def devolver(self):
-        self.fecha_devolucion = date.today()
-        print(f"Libro '{self.libro.titulo}' devuelto el {self.fecha_devolucion}")
-
-
-# Clase Horario (Composición con Biblioteca)
-
-class Horario:
-    def __init__(self, dias_apertura, hora_apertura, hora_cierre):
-        self.dias_apertura = dias_apertura
-        self.hora_apertura = hora_apertura
-        self.hora_cierre = hora_cierre
-
-    def mostrarHorario(self):
-        print(f"Horario: {self.dias_apertura}, de {self.hora_apertura} a {self.hora_cierre}")
-
-
-# Clase Biblioteca (Principal)
 class Biblioteca:
-    def __init__(self, nombre, dias_apertura, hora_apertura, hora_cierre):
+    def __init__(self, nombre):
         self.nombre = nombre
         self.libros = []     
         self.autores = []    
         self.prestamos = []   
-        self.horario = Horario(dias_apertura, hora_apertura, hora_cierre)  # Composición
+        # COMPOSICIÓN: Horario como clase interna
+        self.horario = self.Horario("Lunes a Viernes", "08:00", "18:00")
+    
+    # CLASE INTERNA Horario (Composición)
+    class Horario:
+        def __init__(self, dias_apertura, hora_apertura, hora_cierre):
+            self.dias_apertura = dias_apertura
+            self.hora_apertura = hora_apertura
+            self.hora_cierre = hora_cierre
+
+        def mostrarHorario(self):
+            print(f"Horario: {self.dias_apertura}, de {self.hora_apertura} a {self.hora_cierre}")
 
     def agregarLibro(self, libro):
         self.libros.append(libro)
@@ -86,9 +26,12 @@ class Biblioteca:
         self.autores.append(autor)
 
     def prestarLibro(self, estudiante, libro):
-        prestamo = Prestamo(estudiante, libro)
-        self.prestamos.append(prestamo)
-        print(f"✅ Se realizó el préstamo del libro '{libro.titulo}' a {estudiante.nombre}")
+        if libro in self.libros:
+            prestamo = Prestamo(estudiante, libro)
+            self.prestamos.append(prestamo)
+            print(f"✅ Se realizó el préstamo del libro '{libro.titulo}' a {estudiante.nombre}")
+        else:
+            print(f"❌ El libro '{libro.titulo}' no está disponible")
 
     def mostrarEstado(self):
         print(f"\n=== Estado de la Biblioteca '{self.nombre}' ===")
@@ -104,7 +47,7 @@ class Biblioteca:
         for p in self.prestamos:
             p.mostrarInfo()
 
-        print()
+        print("\nHorario de atención:")
         self.horario.mostrarHorario()
 
     def cerrarBiblioteca(self):
@@ -113,33 +56,101 @@ class Biblioteca:
         print("Todos los préstamos han sido eliminados.")
 
 
-# PRUEBA DEL SISTEMA
+class Libro:
+    def __init__(self, titulo, isbn, contenidos_paginas):
+        self.titulo = titulo
+        self.isbn = isbn
+        # COMPOSICIÓN: Páginas como clases internas
+        self.paginas = [self.Pagina(i+1, contenido) for i, contenido in enumerate(contenidos_paginas)]
+    
+    # CLASE INTERNA Pagina (Composición)
+    class Pagina:
+        def __init__(self, numero, contenido):
+            self.numero = numero
+            self.contenido = contenido
+
+        def mostrarPagina(self):
+            print(f"Página {self.numero}: {self.contenido}")
+
+    def leer(self):
+        print(f"--- Leyendo '{self.titulo}' ---")
+        for pagina in self.paginas:
+            pagina.mostrarPagina()
+
+
+class Autor:
+    def __init__(self, nombre, nacionalidad):
+        self.nombre = nombre
+        self.nacionalidad = nacionalidad
+
+    def mostrarInfo(self):
+        print(f"Autor: {self.nombre} ({self.nacionalidad})")
+
+
+class Estudiante:
+    def __init__(self, codigo, nombre):
+        self.codigo = codigo
+        self.nombre = nombre
+
+    def mostrarInfo(self):
+        print(f"Estudiante: {self.nombre} - Código: {self.codigo}")
+
+
+class Prestamo:
+    def __init__(self, estudiante, libro):
+        self.fecha_prestamo = date.today()
+        self.fecha_devolucion = self.fecha_prestamo + timedelta(days=15)  # 15 días para devolución
+        self.estudiante = estudiante  # ASOCIACIÓN
+        self.libro = libro  # ASOCIACIÓN
+
+    def mostrarInfo(self):
+        print(f"Préstamo: Libro '{self.libro.titulo}' a {self.estudiante.nombre}")
+        print(f"  Fecha préstamo: {self.fecha_prestamo}")
+        print(f"  Fecha devolución: {self.fecha_devolucion}")
+
+
+# PRUEBA MEJORADA QUE DEMUESTRA LAS TRES RELACIONES
 if __name__ == "__main__":
-    # Crear autores
-    autor1 = Autor("Gabriel García Márquez", "Colombiana")
-    autor2 = Autor("Julio Verne", "Francesa")
-
-    # Crear libros (cada uno con páginas internas)
-    libro1 = Libro("Cien años de soledad", "ISBN001", ["Inicio...", "Desarrollo...", "Final..."])
-    libro2 = Libro("Viaje al centro de la Tierra", "ISBN002", ["Capítulo 1", "Capítulo 2", "Capítulo 3"])
-
-    # Crear biblioteca
-    biblioteca = Biblioteca("Biblioteca UMSA", "Lunes a Viernes", "08:00", "18:00")
-
-    # Agregar autores y libros
-    biblioteca.agregarAutor(autor1)
-    biblioteca.agregarAutor(autor2)
-    biblioteca.agregarLibro(libro1)
-    biblioteca.agregarLibro(libro2)
-
-    # Crear estudiante
-    estudiante1 = Estudiante("202501", "Andrea Choque")
-
-    # Realizar préstamo
-    biblioteca.prestarLibro(estudiante1, libro1)
-
-    # Mostrar estado general
+    print("=== DEMOSTRACIÓN DE RELACIONES ===")
+    
+    # 1. DEMOSTRAR AGREGACIÓN (los objetos existen independientemente)
+    print("\n1. RELACIÓN DE AGREGACIÓN:")
+    autor = Autor("Mario Vargas Llosa", "Peruana")
+    libro = Libro("La ciudad y los perros", "ISBN003", ["Capítulo 1", "Capítulo 2"])
+    
+    print(" - Autor y Libro creados independientemente")
+    autor.mostrarInfo()
+    print(f" - Libro: {libro.titulo}")
+    
+    biblioteca = Biblioteca("Biblioteca Central UMSA")
+    
+    # AGREGACIÓN: Los libros y autores existen fuera de la biblioteca
+    biblioteca.agregarAutor(autor)
+    biblioteca.agregarLibro(libro)
+    print(" - Autor y Libro agregados a la biblioteca (Agregación)")
+    
+    # 2. DEMOSTRAR COMPOSICIÓN (los objetos no existen independientemente)
+    print("\n2. RELACIÓN DE COMPOSICIÓN:")
+    print(" - Horario creado automáticamente con la Biblioteca")
+    biblioteca.horario.mostrarHorario()
+    
+    libro_composicion = Libro("Composición Demo", "ISBN004", ["Pág1", "Pág2"])
+    print(" - Páginas creadas automáticamente con el Libro")
+    libro_composicion.leer()
+    
+    # 3. DEMOSTRAR ASOCIACIÓN (uso temporal entre objetos independientes)
+    print("\n3. RELACIÓN DE ASOCIACIÓN:")
+    estudiante = Estudiante("202502", "Carlos Pérez")
+    estudiante.mostrarInfo()
+    
+    # ASOCIACIÓN: Préstamo conecta Estudiante y Libro temporalmente
+    prestamo = Prestamo(estudiante, libro)
+    prestamo.mostrarInfo()
+    print(" - Préstamo asocia Estudiante y Libro (Asociación)")
+    
+    # Estado final
+    print("\n" + "="*50)
     biblioteca.mostrarEstado()
-
+    
     # Cerrar biblioteca
     biblioteca.cerrarBiblioteca()
